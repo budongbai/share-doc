@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>phantom_read.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<pre><code>CREATE TABLE `t` (
+  `id` int(11) NOT NULL,
+  `c` int(11) DEFAULT NULL,
+  `d` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `c` (`c`)
+) ENGINE=InnoDB;
+
+insert into t values(0,0,0),(5,5,5),(10,10,10),(15,15,15),(20,20,20),(25,25,25);
+</code></pre>
+<h1 id="1-%E4%BB%80%E4%B9%88%E6%98%AF%E5%B9%BB%E8%AF%BB">1. 什么是幻读？</h1>
+<p>假设只在 id=5 这一行加行锁</p>
+<p><img src="./p1.png" alt="图1" title="假设只在 id=5 这一行加行锁"></p>
+<p>Q3 读到 id=1 这一行的现象，被称为“幻读”。<br>
+也就是说，幻读指的是一个事务在前后两次查询同一个范围的时候，后一次查询看到了前一次查询没有看到的行。</p>
+<h1 id="2-%E5%B9%BB%E8%AF%BB%E6%9C%89%E5%95%A5%E9%97%AE%E9%A2%98">2. 幻读有啥问题？</h1>
+<h2 id="%E8%AF%AD%E4%B9%89%E8%A2%AB%E7%A0%B4%E5%9D%8F">语义被破坏</h2>
+<p><img src="./p2.png" alt="图2"></p>
+<h2 id="%E6%95%B0%E6%8D%AE%E4%B8%80%E8%87%B4%E6%80%A7%E9%97%AE%E9%A2%98">数据一致性问题</h2>
+<p><img src="./p3.png" alt="图3"></p>
+<p>经过 T1 时刻，id=5 这一行变成 (5,5,100)，当然这个结果最终是在 T6 时刻正式提交的 ;</p>
+<p>经过 T2 时刻，id=0 这一行变成 (0,5,5);</p>
+<p>经过 T4 时刻，表里面多了一行 (1,5,5);其他行跟这个执行序列无关，保持不变。</p>
+<hr>
+<p>T2 时刻，session B 事务提交，写入了两条语句；</p>
+<p>T4 时刻，session C 事务提交，写入了两条语句；</p>
+<p>T6 时刻，session A 事务提交，写入了 update t set d=100 where d=5 这条语句。</p>
+<pre><code>update t set d=5 where id=0; /*(0,0,5)*/
+update t set c=5 where id=0; /*(0,5,5)*/
+
+insert into t values(1,1,5); /*(1,1,5)*/
+update t set c=5 where id=1; /*(1,5,5)*/
+
+update t set d=100 where d=5;/*所有d=5的行，d改成100*/
+</code></pre>
+<p>这个数据不一致是怎么引入的？</p>
+<p><strong>因为我们最开始假设了“select * from t where d=5 for update 这条语句只给 d=5 这一行，也就是 id=5 的这一行加锁”</strong></p>
+<h1 id="3-%E5%92%8B%E8%A7%A3%E5%86%B3%E5%91%A2">3. 咋解决呢？</h1>
+<p>我们能想到的方式：把扫描过程中碰到的行，也都加上写锁。</p>
+<p><img src="./p4.png" alt="图4"></p>
+<p>所以，行锁是解决不了问题的，因为新插入的记录是记录之间的“间隙”。所以为了解决幻读问题，InnoDB引入了新的锁，也就是间隙锁（Gap Lock)。</p>
+<h1 id="4-innodb%E4%B8%AD%E7%9A%84%E9%97%B4%E9%9A%99%E9%94%81--repeatable-read">4. InnoDB中的间隙锁 （ Repeatable Read ）</h1>
+<ol>
+<li>
+<p>行锁(Record Lock):单个记录上的锁</p>
+</li>
+<li>
+<p>间隙锁(Gap Lock):间隙锁，锁定一个范围，但不包括记录本身。</p>
+</li>
+<li>
+<p>Next-Key Lock: 行锁+ 间隙锁，锁定一个范围，并锁定记录本身。</p>
+<p>create table t(a int,key idx_a(a))engine =innodb;
+insert into t values(1),(3),(5),(8),(11);
+session a:
+start transaction;
+select * from t where a = 8 for update;</p>
+</li>
+</ol>
+<p>(-∞,1)，1,(1,3)，3, (3,5)，5, (5,8)，8,(8,11)，11, (11,+∞）</p>
+<pre><code>create table t(id int,name varchar(10),key idx_id(id),primary key(name))engine =innodb;
+insert into t values(1,'a'),(3,'c'),(5,'e'),(8,'g'),(11,'j');  
+session a:
+start transaction;
+delete from t where id=8;
+</code></pre>
+<p>(5e, 8g),8g,(8g,11j)</p>
+<pre><code>create table t(a int primary key)engine =innodb;
+insert into t values(1),(3),(5),(8),(11);
+
+session a:
+start transaction;
+select * from t where a = 8 for update;
+</code></pre>
+<p>因为InnoDB对于行的查询都是采用了Next-Key Lock的算法，锁定的不是单个值，而是一个范围，按照这个方法是会和第一次测试结果一样。但是，当查询的索引含有唯一属性的时候，Next-Key Lock 会进行优化，将其降级为Record Lock，即仅锁住索引本身，不是范围。</p>
+<h1 id="5-%E9%97%B4%E9%9A%99%E9%94%81%E5%8F%88%E4%BC%9A%E6%9C%89%E5%95%A5%E9%97%AE%E9%A2%98">5. 间隙锁又会有啥问题？</h1>
+<p>场景：任意锁住一行，如果这一行不存在的话就插入，如果存在这一行就更新它的数据。
+<img src="./p5.png" alt="图5"></p>
+<p>间隙锁的引入，可能会导致同样的语句锁住更大的范围，也就影响了并发度。</p>
+<h1 id="6-%E5%8F%82%E8%80%83%E6%96%87%E6%A1%A3">6. 参考文档</h1>
+<ol>
+<li>https://www.cnblogs.com/zhoujinyi/p/3435982.html</li>
+<li>https://time.geekbang.org/column/article/75173</li>
+</ol>
+
+</body>
+</html>
