@@ -1,3 +1,16 @@
+# AQS
+
+![./aqs.webp](./aqs.webp)
+
+## CLH
+
+![./clh.webp](./clh.webp)
+
+## CLH变体
+
+![./aqs-clh.webp](./aqs-clh.webp)
+
+
 Provides a framework for implementing blocking locks and related synchronizers (semaphores, events, etc) that rely on first-in-first-out (FIFO) wait queues. This class is designed to be a useful basis for most kinds of synchronizers that rely on a single atomic int value to represent state. Subclasses must define the protected methods that change this state, and which define what that state means in terms of this object being acquired or released. Given these, the other methods in this class carry out all queuing and blocking mechanics. Subclasses can maintain other state fields, but only the atomically updated int value manipulated using methods getState, setState and compareAndSetState is tracked with respect to synchronization.
 
 提供一个框架，用于实现依赖先进先出 (FIFO) 等待队列的阻塞锁和相关同步器（信号量、事件等）。 此类旨在成为大多数依赖单个原子 int 值来表示状态的同步器的有用基础。 子类必须定义更改此状态的受保护方法，并定义该状态在获取或释放此对象方面的含义。 鉴于这些，此类中的其他方法执行所有排队和阻塞机制。 子类可以维护其他状态字段，但只有使用 getState、setState 和 compareAndSetState 方法操作的原子更新的 int 值才会被同步跟踪。
@@ -146,3 +159,4 @@ Here is a latch class that is like a CountDownLatch except that it only requires
      sync.acquireSharedInterruptibly(1);
    }
  }
+

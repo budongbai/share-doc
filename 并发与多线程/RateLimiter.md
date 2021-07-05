@@ -1,4 +1,5 @@
 # RateLimiter
+
 ```
       RateLimiter
           ^
@@ -8,14 +9,19 @@
       |         |
 SmoothBursty SmoothWarmingUp
 ```
+
 ## RateLimiter使用示例
+
 - 有一些任务要执行，但不希望每秒提交任务多于2个
 - 数据流，每秒获取5kb
+
 ## 限流模式
+
 - 稳定模式（SmoothBursty: 令牌生成速度恒定）
 - 渐进模式（SmoothWarmingUp：令牌生成速度缓慢提升直到维持在一个稳定值）
 
 ## 源码解析
+
 ```java
   @VisibleForTesting
   static RateLimiter create(double permitsPerSecond, SleepingStopwatch stopwatch) {
@@ -64,6 +70,7 @@ SmoothBursty SmoothWarmingUp
     return max(momentAvailable - nowMicros, 0);
   }
 ```
+
 ### SmoothRateLimiter
 
 ```java
@@ -89,6 +96,7 @@ SmoothBursty SmoothWarmingUp
     return returnValue;
   }
 ```
+
 ```java
   void resync(long nowMicros) {
     // if nextFreeTicket is in the past, resync to now
@@ -101,8 +109,11 @@ SmoothBursty SmoothWarmingUp
     }
   }
 ```
+
 ### SmoothWarmingUp
+
 ![smooth-warmup.png](./smooth-warmup.png)
+
 ```java
     // 当前令牌桶中存储的令牌数，本次请求要拿到令牌数
     @Override
