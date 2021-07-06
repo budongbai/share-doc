@@ -78,7 +78,7 @@ This class provides an efficient and scalable basis for synchronization in part 
 
 Usage Examples
 Here is a non-reentrant mutual exclusion lock class that uses the value zero to represent the unlocked state, and one to represent the locked state. While a non-reentrant lock does not strictly require recording of the current owner thread, this class does so anyway to make usage easier to monitor. It also supports conditions and exposes one of the instrumentation methods:
-  
+```java
  class Mutex implements Lock, java.io.Serializable {
 
    // Our internal helper class
@@ -135,8 +135,10 @@ Here is a non-reentrant mutual exclusion lock class that uses the value zero to 
      return sync.tryAcquireNanos(1, unit.toNanos(timeout));
    }
  }
+```
 Here is a latch class that is like a CountDownLatch except that it only requires a single signal to fire. Because a latch is non-exclusive, it uses the shared acquire and release methods.
-  
+
+```java
  class BooleanLatch {
 
    private static class Sync extends AbstractQueuedSynchronizer {
@@ -159,4 +161,202 @@ Here is a latch class that is like a CountDownLatch except that it only requires
      sync.acquireSharedInterruptibly(1);
    }
  }
+```
 
+## 源码解析
+
+### acquire
+
+```java
+    // 以独占模式获取，忽略中断。通过至少调用一次tryAcquire来来实现。否则线程会排队，可能反复阻塞以及解除阻塞，调用tryAcquire直到成功。
+    public final void acquire(int arg) {
+        // 尝试获取同步状态，成功的话直接返回了
+        if (!tryAcquire(arg) &&
+            // 为当前线程生成一个独占模式的结点，放到队列尾部
+            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))
+            // 补了一次中断，因为在parkAndInterrupt中判断是否中断用了Thread.interrupted方法，这个方法在判断是否中断的时候，将中断标记清除了
+            // 为啥没有用Thread.isInterrupted方法
+            selfInterrupt();
+    }
+```
+
+```java
+    final boolean acquireQueued(final Node node, int arg) {
+        boolean failed = true;
+        try {
+            boolean interrupted = false;
+            // 死循环，检查当前节点的前驱节点是不是头结点，是的话再尝试获取同步状态
+            for (;;) {
+                final Node p = node.predecessor();
+                if (p == head && tryAcquire(arg)) {
+                    setHead(node);
+                    p.next = null; // help GC
+                    failed = false;
+                    return interrupted;
+                }
+                // 检查并更新当前节点的前驱节点的同步状态。如果线程应该阻塞返回true。
+                if (shouldParkAfterFailedAcquire(p, node) &&
+                    // 中断
+                    parkAndCheckInterrupt())
+                    interrupted = true;
+            }
+        } finally {
+            // 如果还是没有成功，取消请求
+            if (failed)
+                cancelAcquire(node);
+        }
+    }
+```
+
+```java
+// 检查并更新当前节点的前驱节点的同步状态。如果线程应该阻塞返回true。
+// 这个方法是整个获取循环中主要的信号控制
+private static boolean shouldParkAfterFailedAcquire(Node pred, Node node) {
+        int ws = pred.waitStatus;
+        if (ws == Node.SIGNAL)
+            /*
+             * This node has already set status asking a release
+             * to signal it, so it can safely park.
+             */
+             // 如果前驱节点的状态已经是-1，当前节点应该中断
+            return true;
+        // 前驱节点的状态>0， 根据AQS中waitStatus的定义，我们知道只有取消状态为1，其他状态都小于或等于0
+        if (ws > 0) {
+            /*
+             * Predecessor was cancelled. Skip over predecessors and
+             * indicate retry.
+             */
+            do {
+                // 从当前节点向前找第一个不是取消的前驱节点
+                // 在向前寻找的过程中，还将当前节点的前驱节点进行了重置，最终指向的前驱节点即找到的第一个不是取消状态的前驱节点
+                node.prev = pred = pred.prev;
+            } while (pred.waitStatus > 0);
+            // 前驱节点的后继节点设为当前节点
+            pred.next = node;
+        } else {
+            /*
+             * waitStatus must be 0 or PROPAGATE.  Indicate that we
+             * need a signal, but don't park yet.  Caller will need to
+             * retry to make sure it cannot acquire before parking.
+             */
+            // 再给一次机会试一下能不能获取到同步状态
+            compareAndSetWaitStatus(pred, ws, Node.SIGNAL);
+        }
+        return false;
+    }
+```
+
+```java
+    // 取消正在进行的获取尝试
+    private void cancelAcquire(Node node) {
+        // Ignore if node doesn't exist
+        if (node == null)
+            return;
+
+        // 清除线程信息
+        node.thread = null;
+
+        // Skip cancelled predecessors
+        // 从后往前遍历，找到第一个不是取消状态的前驱节点
+        Node pred = node.prev;
+        while (pred.waitStatus > 0)
+            node.prev = pred = pred.prev;
+
+        // predNext is the apparent node to unsplice. CASes below will
+        // fail if not, in which case, we lost race vs another cancel
+        // or signal, so no further action is necessary.
+        Node predNext = pred.next;
+
+        // Can use unconditional write instead of CAS here.
+        // After this atomic step, other Nodes can skip past us.
+        // Before, we are free of interference from other threads.
+        // 当前节点设置为取消状态
+        node.waitStatus = Node.CANCELLED;
+
+        // If we are the tail, remove ourselves.
+        // 如果当前节点是尾巴，将尾结点CAS设置为刚才遍历拿到的前驱节点
+        if (node == tail && compareAndSetTail(node, pred)) {
+            // 再CAS设置前驱节点的后继节点
+            compareAndSetNext(pred, predNext, null);
+        } else {
+            // If successor needs signal, try to set pred's next-link
+            // so it will get one. Otherwise wake it up to propagate.
+            // 当前节点不是尾巴或者CAS设置尾结点的时候失败了，说明在进行CAS操作时尾结点不是当前节点了
+            int ws;
+            // 如果前驱节点不是头节点
+            if (pred != head &&
+                // 前驱节点的状态是-1
+                ((ws = pred.waitStatus) == Node.SIGNAL ||
+                  // 前驱节点状态小于等于0,且CAS操作设置前驱节点的状态为-1
+                 (ws <= 0 && compareAndSetWaitStatus(pred, ws, Node.SIGNAL))) &&
+                pred.thread != null) {
+                // 当前节点后继节点不为空，且其后继节点状态不是取消，CAS将前驱节点的后继节点设置为当前节点的后继节点
+                Node next = node.next;
+                // 这里只看了当前节点的后继节点而没有继续向后遍历后继节点
+                // 原因可能是因为后继节点的链接本身就可能是断掉的
+                // 而且在判断节点是否需要中断的时候(shouldParkAfterFailedAcquire)也从后向前依次遍历清理掉了取消状态的节点
+                if (next != null && next.waitStatus <= 0)
+                    compareAndSetNext(pred, predNext, next);
+            } else {
+                // 唤醒当前节点的后继节点
+                unparkSuccessor(node);
+            }
+
+            node.next = node; // help GC
+        }
+    }
+```
+
+### release
+
+```java
+    public final boolean release(int arg) {
+        // 尝试释放同步状态
+        if (tryRelease(arg)) {
+            Node h = head;
+            // 头节点不为空或者不是正在初始化
+            if (h != null && h.waitStatus != 0)
+                // 唤醒后继节点
+                unparkSuccessor(h);
+            return true;
+        }
+        return false;
+    }
+```
+
+h == null Head还没初始化。初始情况下，head == null，第一个节点入队，Head会被初始化一个虚拟节点。所以说，这里如果还没来得及入队，就会出现head == null 的情况。
+
+h != null && waitStatus == 0 表明后继节点对应的线程仍在运行中，不需要唤醒。
+
+h != null && waitStatus < 0 表明后继节点可能被阻塞了，需要唤醒。
+
+```java
+// 如果当前节点有后继节点的话，唤醒后继节点
+private void unparkSuccessor(Node node) {
+        /*
+         * If status is negative (i.e., possibly needing signal) try
+         * to clear in anticipation of signalling.  It is OK if this
+         * fails or if status is changed by waiting thread.
+         */
+        int ws = node.waitStatus;
+        if (ws < 0)
+            compareAndSetWaitStatus(node, ws, 0);
+
+        /*
+         * Thread to unpark is held in successor, which is normally
+         * just the next node.  But if cancelled or apparently null,
+         * traverse backwards from tail to find the actual
+         * non-cancelled successor.
+         */
+        Node s = node.next;
+        // 如果当前节点的后继节点为空，或者其状态为取消，则从尾节点向前遍历，找到一个状态不是取消状态的后继节点，将它唤醒
+        if (s == null || s.waitStatus > 0) {
+            s = null;
+            for (Node t = tail; t != null && t != node; t = t.prev)
+                if (t.waitStatus <= 0)
+                    s = t;
+        }
+        if (s != null)
+            LockSupport.unpark(s.thread);
+    }
+```
