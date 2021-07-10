@@ -1,13 +1,25 @@
 # ConcurrentHashMap源码解析
+
+## HashMap线程不安全
+
+1.7中会出现死循环、数据丢失等问题
+1.8会出现数据覆盖的问题
+详见<https://zhuanlan.zhihu.com/p/344459822>
+
 ## 结构
+
 ![structure.png](./structure.png)
+
 ## 结点类型
+
 - Node<K,V> implements Map.Entry<K,V> 普通结点
 - ForwardingNode<K,V> extends Node<K,V> 迁移操作期间bin头结点，下文中简称转发结点
 - ReservationNode<K,V> extends Node<K,V> computeIfAbsent和compute方法使用的占位结点
 - TreeBin<K,V> extends Node<K,V> 红黑树的包装结点，包含根节点等信息
 - TreeNode<K,V> extends Node<K,V> TreeBin中使用的结点
+
 ## ConcurrentHashMap定义的主要字段
+
 ```java
     /**
      * The array of bins. Lazily initialized upon first insertion.
@@ -57,22 +69,28 @@
     private transient ValuesView<K,V> values;
     private transient EntrySetView<K,V> entrySet;
 ```
+
 其中sizeCtl含义比较复杂：
+
 - -1 ：表示正在初始化
 - -(1+n): n表示扩容线程的数量
 - 0： 表未初始化，默认值
 - n: 表示下次扩容的大小
 
 在ConcurrentHashMap中定义了几个特殊的哈希值：
+
 - -1 转发结点的哈希值
 - -2 树的根结点的哈希值
-- -3 computeIfAbsent和compute方法中用到的占位结点的哈希值
+- -3 
+
 ```java
     static final int MOVED     = -1; // hash for forwarding nodes
     static final int TREEBIN   = -2; // hash for roots of trees
     static final int RESERVED  = -3; // hash for transient reservations
 ```
+
 ## 构造函数
+
 ```java
     public ConcurrentHashMap(int initialCapacity,
                              float loadFactor, int concurrencyLevel) {
@@ -87,7 +105,9 @@
         this.sizeCtl = cap;
     }
 ```
+
 tableSizeFor计算了比cap大的最小2次幂，算法非常巧妙，通过 n | n >>> 1 将第一个高位的1扩展到与它右侧相邻的位也是1，得到11******这样形式的二进制数，然后再继续向低位扩展。
+
 ```java
     static final int tableSizeFor(int cap) {
         // 如果不减一，当前cap恰好是2的次幂，最终得到的结果就会是cap*2，而不是cap了
@@ -100,11 +120,16 @@ tableSizeFor计算了比cap大的最小2次幂，算法非常巧妙，通过 n |
         return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
     }
 ```
+
 以cap=10为例，其运算过程如下：
+
 ![tableSizeFor.png](./tableSizeFor.png)
+
 ## 初始化 initTable
+
 initTable并没有在构造器中直接完成初始化，而是在putVal、merge、computeIfAbsent、
 computeIfPresent、compute等元素操作时才进行初始化。
+
 ```java
     /**
      * Initializes table, using the size recorded in sizeCtl.
@@ -136,7 +161,9 @@ computeIfPresent、compute等元素操作时才进行初始化。
         return tab;
     }
 ```
+
 ## 几个工具方法
+
 ```java
     // 获取表中下标为i的头结点，也就是第i个桶，依赖Unsafe
     static final <K,V> Node<K,V> tabAt(Node<K,V>[] tab, int i) {
@@ -152,8 +179,11 @@ computeIfPresent、compute等元素操作时才进行初始化。
         U.putObjectVolatile(tab, ((long)i << ASHIFT) + ABASE, v);
     }
 ```
+
 ## 基本操作
+
 ### get
+
 ```java
     public V get(Object key) {
         Node<K,V>[] tab; Node<K,V> e, p; int n, eh; K ek;
@@ -182,7 +212,9 @@ computeIfPresent、compute等元素操作时才进行初始化。
         return null;
     }
 ```
+
 get流程：
+
 1. 计算hash值
 2. 定位到桶
 3. 头结点是否要找到结点
@@ -190,6 +222,7 @@ get流程：
 5. 头结点是普通结点，遍历查找
 
 ### put
+
 ```java
     public V put(K key, V value) {
         return putVal(key, value, false);
@@ -277,14 +310,18 @@ get流程：
         return null;
     }
 ```
+
 put的流程：
+
 1. 计算hash值
 2. 如果hash表还没初始化，初始化hash表
 3. 如果定位到的桶还没有头结点，CAS设置头结点
 4. 如果发现定位的桶中头结点hash是MOVED(-1，表示已迁移)，那当前线程就去帮助扩容
 5. 如果定位的桶，头结点hash值不是MOVED，锁住头结点，头结点可能是普通结点或者TreeBin，分情况遍历插入结点
 6. 计数，同时看是否触发了扩容
+
 #### 帮助扩容 helpTransfer
+
 ```java
     /**
      * Helps transfer if a resize is in progress.
@@ -316,10 +353,14 @@ put的流程：
         return table;
     }
 ```
+
 #### addCount
+
 addCount的作用
+
 - count
 - 检查是否触发扩容条件
+
 ```java
     /**
      * Adds to count, and if table is too small and not already
@@ -387,8 +428,10 @@ addCount的作用
         }
     }
 ```
+
 baseCount是没有竞争的情况下，更新的基础计数值。
 counterCells，计数盒子，在有竞争的情况下，当前线程随机选取一个盒子，更新盒子的计数。
+
 ```java
     public int size() {
         long n = sumCount();
@@ -408,9 +451,13 @@ counterCells，计数盒子，在有竞争的情况下，当前线程随机选�
         return sum;
     }
 ```
+
 size方法，通过baseCount+各计数盒子的计数值来得到表中元素总数。
+
 #### tryPresize
+
 tryPresize：在putAll、treeifyBin时调用
+
 ```java
     /**
      * Tries to presize table to accommodate the given number of elements.
@@ -474,13 +521,16 @@ tryPresize：在putAll、treeifyBin时调用
         }
     }
 ```
+
 rs与RESIZE_STAMP_SHIFT配合可以求出新的sizeCtl的值，分情况如下：
+
 - sc < 0
 已经有线程在扩容，将sizeCtl+1并调用transfer()让当前线程参与扩容。
 - sc >= 0
 表示没有线程在扩容，使用CAS将sizeCtl的值改为(rs << RESIZE_STAMP_SHIFT) + 2)。
 
 简单来说，sc = (rs << RESIZE_STAMP_SHIFT) + 2)，sc的高16位表示数据校验标识，低16位表示多少个线程正在执行扩容操作。
+
 ```java
     static final int resizeStamp(int n) {
         return Integer.numberOfLeadingZeros(n) | (1 << (RESIZE_STAMP_BITS - 1));
@@ -509,6 +559,7 @@ rs即resizeStamp(n)，将n转换为形式如0000 0000 0000 0000 1xxx xxx xxxx xx
 在第一个线程要对hash表进行扩容之前，sizeCtl的值肯定大于等于0的，而第一个线程要执行扩容时，把sizeCtl设置为(rs << RESIZE_STAMP_SHIFT) + 2))，这是一个比较大的负数，而之后有新加入扩容的线程时，将sizeCtl+1，之后有线程结束扩容，则sizeCtl-1，最终所有扩容任务完成时sizeCtrl还是(rs << RESIZE_STAMP_SHIFT) + 2))
 
 ## 扩容 transfer
+
 ```java
     private final void transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) {
         // hash表容量n, 步长stride
@@ -683,7 +734,6 @@ rs即resizeStamp(n)，将n转换为形式如0000 0000 0000 0000 1xxx xxx xxxx xx
     }
 ```
 
-transfer的流程：
 1. nextTable是否初始化，没有就进行初始化
 2. 执行迁移
     - 分配一个区间
@@ -696,6 +746,7 @@ transfer的流程：
 ![transfer.png](./transfer.png)
 
 ## 参考文献
-1. https://stackoverflow.com/questions/47175835/how-does-concurrenthashmap-resizestamp-method-work
-2. https://blog.csdn.net/zzu_seu/article/details/106698150
-3. https://www.zhenchao.org/2019/01/31/java/cas-based-concurrent-hashmap/
+
+1. <https://stackoverflow.com/questions/47175835/how-does-concurrenthashmap-resizestamp-method-work>
+2. <https://blog.csdn.net/zzu_seu/article/details/106698150>
+3. <https://www.zhenchao.org/2019/01/31/java/cas-based-concurrent-hashmap/>
