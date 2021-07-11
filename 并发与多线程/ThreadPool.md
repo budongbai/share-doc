@@ -390,6 +390,9 @@ ctl是一个原子整型数，其低29位表示线程的数量，高3位表示�
      *
      * @throws SecurityException {@inheritDoc}
      */
+    // 尝试停止所有正在积极执行的任务，听着等待任务的处理，并返回一个正在等待执行的任务列表，从此方法返回时，这些任务将被任务队列中删除。
+    // 此方法不等的主动执行的任务终止，
+    // 除了尽最大努力停止积极执行任务的处理外，不做任何保证
     public List<Runnable> shutdownNow() {
         List<Runnable> tasks;
         final ReentrantLock mainLock = this.mainLock;
