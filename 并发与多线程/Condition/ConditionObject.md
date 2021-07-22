@@ -6,7 +6,7 @@
     // 当前线程进入等待状态直到被通知（signal）或中断。
     // 与此条件相关联的锁被原子释放，当前线程因线程调度目的变得不可用，处于休眠状态直到以下情况发生：
     // 1. 其他线程调用这个条件的signal方法，并且当前线程被选中为被唤醒的线程
-    // 2. 其他线程尾了这个条件调用signalAll方法
+    // 2. 其他线程调用了这个条件的signalAll方法
     // 3. 其他线程中断当前线程，并且支持线程中断暂停
     // 4. 发生了虚假唤醒
     // 如果当前等待线程从await方法返回，那么表示该线程已经获取了Condition对象所对应的锁
@@ -34,7 +34,7 @@ ConditionObject是AQS中的一个内部类，因为Condition的操作需要获�
 
 ```java
         /** First node of condition queue. */
-         private transient Node firstWaiter;
+        private transient Node firstWaiter;
         /** Last node of condition queue. */
         private transient Node lastWaiter;
 ```
