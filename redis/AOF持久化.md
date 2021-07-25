@@ -14,7 +14,7 @@ Redis的服务器进程就是一个事件循环，这个循环中的文件事件
 
 flushAppendOnlyFile函数实现AOF文件写入，其行为由服务器配置的appendfsync选项的值来决定
 
-[appendfsync选项](https://redislabs.com/ebook/part-2-core-concepts/chapter-4-keeping-data-safe-and-ensuring-performance/4-1-persistence-options/4-1-2-append-only-file-persistence/) 与MySQLinnodb_flush_log_at_trx_commit类似
+[appendfsync选项](https://redislabs.com/ebook/part-2-core-concepts/chapter-4-keeping-data-safe-and-ensuring-performance/4-1-persistence-options/4-1-2-append-only-file-persistence/) 与MySQL innodb_flush_log_at_trx_commit类似
 
 - always
   - 将aof_buf中的所有内容写入并同步到AOF文件
