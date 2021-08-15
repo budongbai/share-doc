@@ -85,7 +85,7 @@
             }
         }
 
-protected final int tryAcquireShared(int unused) {
+        protected final int tryAcquireShared(int unused) {
             /*
              * Walkthrough:
              * 1. If write lock held by another thread, fail.

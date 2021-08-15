@@ -103,7 +103,7 @@ await、isBroken、reset等方法都是先获取锁再进行操作的。
                         Thread.currentThread().interrupt();
                     }
                 }
-                // 如果线程因为打破屏障而被欢迎则抛出异常
+                // 如果线程因为打破屏障而被唤醒则抛出异常
                 if (g.broken)
                     throw new BrokenBarrierException();
 
