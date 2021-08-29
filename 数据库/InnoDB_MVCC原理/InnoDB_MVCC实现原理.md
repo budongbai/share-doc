@@ -92,7 +92,7 @@ Read view创建之后，读数据时比较记录最后更新的trx_id和view的h
 
 1. MVCC只在Repeatable Read 和Read Committed两个事务隔离级别下工作。因为Read Uncommitted 总是读取数据行的最新值，而Serializable 则会对读取的数据行加锁.
 2. Read Committed与Repeatable Read 的区别是：在开启事务后进行快照读时，Read Committed能读到最新提交的事务所做的修改；而Repeatable Read 只能读到在事务开启后第一次SELECT读操作之前提交的修改，因此是可重复读.
-3.使用READ COMMITTED隔离级别的事务在每次查询开始时都会生成一个独立的 ReadView。REPEATABLE READ 隔离级别下的ReadView在事务开始后第一次读取数据时生成一个ReadView.
+3. 使用READ COMMITTED隔离级别的事务在每次查询开始时都会生成一个独立的 ReadView。REPEATABLE READ 隔离级别下的ReadView在事务开始后第一次读取数据时生成一个ReadView.
 
 ### 3 Purge线程
 

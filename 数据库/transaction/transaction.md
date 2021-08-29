@@ -84,7 +84,8 @@ redo log buffer(0) >  file system page cache(2) > 磁盘(1)
 
 下面是redo log + undo log的简化过程，便于理解两种日志的过程：
 
-假设有A、B两个数据，值分别为1,2.
+假设有A、B两个数据，值分别为1,2。
+
 1. 事务开始
 2. 记录A=1到undo log
 3. 修改A=3
@@ -121,7 +122,7 @@ commit work and chain 语法：提交事务并自动启动下一个事务，这�
 
 1. 高性能MySQL（第三版）
 2. MySQL技术内幕：InnoDB存储引擎（第2版）
-3. SQL标准: https://www.wiscorp.com/sql20nn.zip
-4. InnoDB next key locking: https://dev.mysql.com/doc/refman/5.7/en/innodb-next-key-locking.html
-5. http://catkang.github.io/2018/08/31/isolation-level.html
-6. https://segmentfault.com/a/1190000017888478
+3. SQL标准: <https://www.wiscorp.com/sql20nn.zip>
+4. InnoDB next key locking: <https://dev.mysql.com/doc/refman/5.7/en/innodb-next-key-locking.html>
+5. <http://catkang.github.io/2018/08/31/isolation-level.html>
+6. <https://segmentfault.com/a/1190000017888478>

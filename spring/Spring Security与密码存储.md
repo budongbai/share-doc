@@ -29,12 +29,11 @@
 比如说 我们要破译rscdf这个密文，先进行一次R函数计算，
 然后会从遍历彩虹表的所有尾结点看能不能找到，如果没有找到，再进行一次H函数和R函数，再去尾结点查找。
 
-
 为了降低 Rainbow Tables 的有效性，鼓励开发人员使用加盐密码。不仅将密码用作哈希函数的输入，还将为每个用户的密码生成随机salt。盐和用户的密码将通过哈希函数运行，产生唯一的哈希值。盐将以明文形式与用户密码一起存储。然后，当用户尝试进行身份验证时，散列密码将与存储的盐和他们键入的密码的散列进行比较。随机盐意味着彩虹表不再有效，因为每个盐和密码组合的哈希值都不同。
 
 但是随着硬件的发展，我们意识到加密哈希（如 SHA-256）不再安全。原因是使用现代硬件，我们可以每秒执行数十亿次哈希计算。这意味着我们可以轻松地单独破解每个密码。
 
-现在鼓励开发人员利用自适应单向函数来存储密码。使用自适应单向函数验证密码是有意占用资源（即 CPU、内存等）的。自适应单向功能允许配置“工作系数”，该系数可以随着硬件的发展而增长。建议将“工作系数”调整为大约需要 1 秒来验证系统上的密码。这种权衡是为了让攻击者难以破解密码，但成本不会高到给您自己的系统带来过大的负担。 
+现在鼓励开发人员利用自适应单向函数来存储密码。使用自适应单向函数验证密码是有意占用资源（即 CPU、内存等）的。自适应单向功能允许配置“工作系数”，该系数可以随着硬件的发展而增长。建议将“工作系数”调整为大约需要 1 秒来验证系统上的密码。这种权衡是为了让攻击者难以破解密码，但成本不会高到给您自己的系统带来过大的负担。
 
 Spring Security中支持了几种自适应单向加盐哈希算法，如bcrypt、PBKDF2、scrypt 和 argon2。其对应的实现分别如右。
 
@@ -50,17 +49,15 @@ Spring Security中默认的加密方法是Bcrypt算法。
 简单来看一下源码的匹配过程，是拿到用户键入密码，和密文。
 从密文中抽取出来算法版本、循环的次数还有salt。对用户键入密码按照这些信息进行加密得到结果，并和密文进行匹配。
 
-
 循环次数，也就是work factor，就是1999年，这两个人发表的论文中提出的。
 
 BCrypt 实现了 OpenBSD风格的 Blowfish 加密哈希算法。 A Future-Adaptable Password Scheme 论文中描述的模式
-该加密Hash系统尝试使用基于 Bruce Schneier 的 Blowfish 密码的计算密集型hash算法来阻止离线密码破解。 
+该加密Hash系统尝试使用基于 Bruce Schneier 的 Blowfish 密码的计算密集型hash算法来阻止离线密码破解。
 该算法的工作因子是参数化的，因此可以随着计算机速度的提高而增加。
 
 crypt_raw 核心密码哈希步骤，其中最耗时的地方是 for(i = 0; i < rounds; i++),这里计算了2^strength次
 
 encode_base64: 使用bctypt稍作修改的base64编码模式对字节数组编码。该编码模式和标准MIMEbase64编码不兼容。
-
 
 bcrypt (cost, salt, pwd )
     state EksBlowfishSetup (cost, salt, key)
@@ -73,20 +70,20 @@ bcrypt (cost, salt, pwd )
 首先就是使用Expensive key setup算法初始化Blowfish状态，其实也就是P盒和S盒
 然后利用P和S对这个文本重复加密64次
 
-
 EksBlowfishSetup (cost, salt, key)
     // 用圆周率pi的数字填充到子密钥，和S-boxes
-	state ← InitState ()
+ state ← InitState ()
     // 根据salt和key 置换P和S-boxes
-   
-	state ← ExpandKey (state, salt, key)
-	repeat (2cost )
+ state ← ExpandKey (state, salt, key)
+ repeat (2cost )
         // 与上面类似
-		state ← ExpandKey (state, 0, salt)
-		state ← ExpandKey (state, 0, key)
-	return state
+  state ← ExpandKey (state, 0, salt)
+  state ← ExpandKey (state, 0, key)
+ return state
+
 ExpandKey的过程
 根据128位的salt和可变长度的密钥修改 P 和 S
+
 1. P中子密钥与加密密钥异或
 2. 密钥的前32位和P1异或，接下来的32位于P2异或，依次类推。
 3. 直到密钥的末尾，开始重用从头开始的位与子密钥异或
@@ -97,7 +94,6 @@ ExpandKey的过程
 
 1. P和S的不可预测及变化的内容会降低未来优化的适用性
 2. S-Box需要4kb的不断访问和修改内存。因此，S-box 不能被共享使用，每次同时执行时必须存在单独的S-box。这极大地限制了在硬件中管道 Feistel 网络的任何尝试的有用性。
-
 
 Blowfish是一个64位的分组密码算法。
 它使用18个32位的由密钥中衍生得到的子密钥，P1-P18。这些子密钥叫做P数组。
@@ -118,11 +114,3 @@ F函数使用了4个从加密密钥中衍生出来的数组，S1,...,S4。
 F (a; b; c; d) = (S1[a]  S2[b])  S3[c]  S4[d]
 
 Eksblowfish和Blowfish的区别：加密密钥衍生得到子密钥和S-boxes
-
-
-
-
-
-
-
-
