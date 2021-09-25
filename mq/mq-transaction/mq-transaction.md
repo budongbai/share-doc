@@ -1,11 +1,12 @@
 # RocketMQ 事务消息
 
 ## 适用场景
+
 需要异步更新数据，并且对数据实时性要求不太高的场景
 
 ## 代码演示
 
-事务示例相关文档详见 <https://rocketmq.apache.org/docs/transaction-example/>
+事务示例相关文档详见 [https://rocketmq.apache.org/docs/transaction-example/](https://rocketmq.apache.org/docs/transaction-example/)
 
 ### TranscationListener
 
@@ -20,7 +21,7 @@ LocalTransactionState checkLocalTransaction(final MessageExt msg);
 
 ## 实现
 
-![事务消息](./transaction.png)
+![&#x4E8B;&#x52A1;&#x6D88;&#x606F;](../../.gitbook/assets/transaction.png)
 
 利用事务反查机制解决了事务消息提交失败的问题。
 
@@ -37,17 +38,15 @@ LocalTransactionState checkLocalTransaction(final MessageExt msg);
 
 1.事务消息在一阶段对用户不可见
 
-在RocketMQ事务消息的主要流程中，一阶段的消息如何对用户不可见。其中，事务消息相对普通消息最大的特点就是一阶段发送的消息对用户是不可见的。
-那么，如何做到写入消息但是对用户不可见呢？
+在RocketMQ事务消息的主要流程中，一阶段的消息如何对用户不可见。其中，事务消息相对普通消息最大的特点就是一阶段发送的消息对用户是不可见的。 那么，如何做到写入消息但是对用户不可见呢？
 
-RocketMQ事务消息的做法是：如果消息是half消息，将备份原消息的主题与消息消费队列，然后改变主题为RMQ_SYS_TRANS_HALF_TOPIC。由于消费组未订阅该主题，故消费端无法消费half类型的消息，然后RocketMQ会开启一个定时任务，从Topic为RMQ_SYS_TRANS_HALF_TOPIC中拉取消息进行消费，根据生产者组获取一个服务提供者发送回查事务状态请求，根据事务状态来决定是提交或回滚消息。
+RocketMQ事务消息的做法是：如果消息是half消息，将备份原消息的主题与消息消费队列，然后改变主题为RMQ\_SYS\_TRANS\_HALF\_TOPIC。由于消费组未订阅该主题，故消费端无法消费half类型的消息，然后RocketMQ会开启一个定时任务，从Topic为RMQ\_SYS\_TRANS\_HALF\_TOPIC中拉取消息进行消费，根据生产者组获取一个服务提供者发送回查事务状态请求，根据事务状态来决定是提交或回滚消息。
 
 在RocketMQ中，消息在服务端的存储结构如下，每条消息都会有对应的索引信息，Consumer通过ConsumeQueue这个二级索引来读取消息实体内容，其流程如下：
 
-![](consume.png)
+![](../../.gitbook/assets/consume.png)
 
 RocketMQ的具体实现策略是：写入的如果事务消息，对消息的Topic和Queue等属性进行替换，同时将原来的Topic和Queue信息存储到消息的属性中，正因为消息主题被替换，故消息并不会转发到该原主题的消息消费队列，消费者无法感知消息的存在，不会消费。其实改变消息主题是RocketMQ的常用“套路”，延时消息的实现机制也是类似的。
-
 
 2.Commit和Rollback操作以及Op消息的引入
 
@@ -61,9 +60,9 @@ Commit相对于Rollback只是在写入Op消息前创建Half消息的索引。
 
 3.Op消息的存储和对应关系
 
-RocketMQ将Op消息写入到全局一个特定的Topic中通过源码中的方法—TransactionalMessageUtil.buildOpTopic()；这个Topic是一个内部的Topic（像Half消息的Topic一样），不会被用户消费。Op消息的内容为对应的Half消息的存储的Offset，这样通过Op消息能索引到Half消息进行后续的回查操作。
+RocketMQ将Op消息写入到全局一个特定的Topic中通过源码中的方法—TransactionalMessageUtil.buildOpTopic\(\)；这个Topic是一个内部的Topic（像Half消息的Topic一样），不会被用户消费。Op消息的内容为对应的Half消息的存储的Offset，这样通过Op消息能索引到Half消息进行后续的回查操作。
 
-![](op-queue.png)
+![](../../.gitbook/assets/op-queue.png)
 
 4.Half消息的索引构建
 
@@ -77,53 +76,54 @@ RocketMQ将Op消息写入到全局一个特定的Topic中通过源码中的方�
 
 ## 源码略读
 
-![](RocketMQ技术内幕8-1.jpeg)
+![](../../.gitbook/assets/RocketMQ技术内幕8-1.jpeg)
 
 ### 发送事务消息
 
-TransactionMQProducer#sendMessageInTransaction(final Message msg, final Object arg)
+TransactionMQProducer\#sendMessageInTransaction\(final Message msg, final Object arg\)
 
-- DefaultMQProducerImpl#sendMessageInTransaction
-  - 获取业务实现的TranscationListener，用于后续发送半消息成功之后执行本地事务
-  - 半消息有一个特殊参数PROPERTY_TRANSACTION_PREPARED为true，用于标识半消息类型
-  - 发送半消息
-  - 如果发送成功，则执行本地事务；否则本地事务状态更新为回滚
-  - 结束事务 endTranscation
-    - 根据本地事务状态确定请求头参数为提交、回滚或未知，单向发送
-  - 组装事务结果返回
+* DefaultMQProducerImpl\#sendMessageInTransaction
+  * 获取业务实现的TranscationListener，用于后续发送半消息成功之后执行本地事务
+  * 半消息有一个特殊参数PROPERTY\_TRANSACTION\_PREPARED为true，用于标识半消息类型
+  * 发送半消息
+  * 如果发送成功，则执行本地事务；否则本地事务状态更新为回滚
+  * 结束事务 endTranscation
+    * 根据本地事务状态确定请求头参数为提交、回滚或未知，单向发送
+  * 组装事务结果返回
 
 ### 处理事务消息
 
-SendMessageProcessor#sendMessage
+SendMessageProcessor\#sendMessage
 
-- TransactionalMessageServiceImpl#prepareMessage
-  - TranscationMessageBridge#putHalfMessage
-    - parseHalfMessageInner: 将真实的主题及队列ID放到参数里，将主题设置为半消息主题
+* TransactionalMessageServiceImpl\#prepareMessage
+  * TranscationMessageBridge\#putHalfMessage
+    * parseHalfMessageInner: 将真实的主题及队列ID放到参数里，将主题设置为半消息主题
 
 ### 处理提交或回滚
 
-EndTranscationProcessor#processRequest
+EndTranscationProcessor\#processRequest
 
-![](RocketMQ技术内幕8-3.jpeg)
+![](../../.gitbook/assets/RocketMQ技术内幕8-3.jpeg)
 
 ### 检查
 
-TransactionalMessageCheckService#run
-  - TranscationMessageServiceImpl#check
+TransactionalMessageCheckService\#run
 
-- 看半消息主题有没有队列
-  - 没有，直接返回了
-- 遍历队列
-  - 拉一批消息
-  - needDiscard: 判断当前检查次数是否已经超过最大检查次数，超过则丢弃该消息
-  - needSkip: 半消息超过文件留存时间，跳过
-  - 如果需要反查，则调用putBackHalfQueue再次写入Half topic，并异步进行反查
+* TranscationMessageServiceImpl\#check
+* 看半消息主题有没有队列
+  * 没有，直接返回了
+* 遍历队列
+  * 拉一批消息
+  * needDiscard: 判断当前检查次数是否已经超过最大检查次数，超过则丢弃该消息
+  * needSkip: 半消息超过文件留存时间，跳过
+  * 如果需要反查，则调用putBackHalfQueue再次写入Half topic，并异步进行反查
 
-ClientRemotingProcessor#processRequest 会去调用发消息时实现的接口，反查本地事务状态
+ClientRemotingProcessor\#processRequest 会去调用发消息时实现的接口，反查本地事务状态
 
-
-![](RocketMQ技术内幕8-4.jpeg)
+![](../../.gitbook/assets/RocketMQ技术内幕8-4.jpeg)
 
 ## 参考文献
-1. <https://github.com/apache/rocketmq/blob/master/docs/cn/design.md>
+
+1. [https://github.com/apache/rocketmq/blob/master/docs/cn/design.md](https://github.com/apache/rocketmq/blob/master/docs/cn/design.md)
 2. RocketMQ设计内幕
+
