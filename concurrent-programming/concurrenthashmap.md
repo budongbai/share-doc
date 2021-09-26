@@ -6,7 +6,7 @@
 
 ## 结构
 
-![structure.png](../../.gitbook/assets/structure.png)
+![structure.png](../../gitbook/assets/structure.png)
 
 ## 结点类型
 
@@ -121,7 +121,7 @@ tableSizeFor计算了比cap大的最小2次幂，算法非常巧妙，通过 n \
 
 以cap=10为例，其运算过程如下：
 
-![tableSizeFor.png](../../.gitbook/assets/tableSizeFor.png)
+![tableSizeFor.png](../../gitbook/assets/tableSizeFor.png)
 
 ## 初始化 initTable
 
@@ -741,7 +741,7 @@ rs即resizeStamp\(n\)，将n转换为形式如0000 0000 0000 0000 1xxx xxx xxxx 
      * 如果已经是一个fwd，说明正在迁移，再去请求分配
      * 执行迁移操作
 
-![transfer.png](../../.gitbook/assets/transfer.png)
+![transfer.png](../../gitbook/assets/transfer.png)
 
 ## 参考文献
 

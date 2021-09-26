@@ -112,7 +112,7 @@ SmoothBursty SmoothWarmingUp
 
 ### SmoothWarmingUp
 
-![smooth-warmup.png](../.gitbook/assets/smooth-warmup.png)
+![smooth-warmup.png](../gitbook/assets/smooth-warmup.png)
 
 ```java
     // 当前令牌桶中存储的令牌数，本次请求要拿到令牌数

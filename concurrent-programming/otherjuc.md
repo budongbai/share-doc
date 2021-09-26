@@ -6,7 +6,7 @@ CountDownLatch运行一个或多个线程等待其他线程完成操作。
 
 其原理是基于AQS，实现了tryAcquireShared和tryReleaseShared方法。使用AQS中的state作为计数器。
 
-![CountDownLatch.png](../.gitbook/assets/CountDownLatch.png)
+![CountDownLatch.png](../gitbook/assets/CountDownLatch.png)
 
 ## CyclicBarrier
 
@@ -16,7 +16,7 @@ CyclicBarrier，让一组线程到达一个屏时被阻塞，直到最后一个�
 
 await、isBroken、reset等方法都是先获取锁再进行操作的。
 
-![./CyclicBarrier.png](../.gitbook/assets/CyclicBarrier.png)
+![./CyclicBarrier.png](../gitbook/assets/CyclicBarrier.png)
 
 在CyclicBarrier中有一个重要变量即generation，其类型是Generation。在每次屏障被打开或者reset时，generation就会改变。
 
@@ -130,5 +130,5 @@ CountDownLatch的计数器只能使用一次，而CyclicBarrier计数器可以�
 
 Semaphore信号量可用于做流量控制，特别是共用资源有限的场景，比如数据库连接。
 
-![Semaphore.png](../.gitbook/assets/Semaphore.png)
+![Semaphore.png](../gitbook/assets/Semaphore.png)
 

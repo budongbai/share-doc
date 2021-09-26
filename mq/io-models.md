@@ -27,31 +27,31 @@ IO操作：对硬盘的读写，对socket的读写，外设的读写 完整的IO
 
 第1步和第2步都被阻塞
 
-![blocking-io](../.gitbook/assets/blocking-io.png)
+![blocking-io](../gitbook/assets/blocking-io.png)
 
 ### 非阻塞IO模型
 
 第1步不阻塞了，但是第2步还是阻塞的 轮询-&gt; 系统调用
 
-![non-blocking-io](../.gitbook/assets/non-blocking-io.png)
+![non-blocking-io](../gitbook/assets/non-blocking-io.png)
 
 ### 多路复用IO
 
 解决无效的系统调用 -&gt; select -&gt; 连接数限制 连接数限制 -&gt; select/poll -&gt; 用户空间和内核空间之间，大量的数据拷贝、内核循环遍历IO状态，浪费CPU时间 存在无效的循环遍历 -&gt; epoll
 
-![multiplexing-io](../.gitbook/assets/multiplexing-io.png)
+![multiplexing-io](../gitbook/assets/multiplexing-io.png)
 
-![multiplexing-io2](../.gitbook/assets/multiplexing-io2.png)
+![multiplexing-io2](../gitbook/assets/multiplexing-io2.png)
 
 ### 信号驱动IO
 
-![sigio](../.gitbook/assets/sigio.png)
+![sigio](../gitbook/assets/sigio.png)
 
 ### 异步IO
 
-![aio](../.gitbook/assets/aio.png)
+![aio](../gitbook/assets/aio.png)
 
 ### 几种IO模型的比较
 
-![io-models.jpg](../.gitbook/assets/io-models.jpg)
+![io-models.jpg](../gitbook/assets/io-models.jpg)
 

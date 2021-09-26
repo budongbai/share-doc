@@ -19,7 +19,7 @@ Tip: 并不是所有的数据库都严格满足以上四个特性。比如MySQL�
 
 ## 隔离级别
 
-![transcation-example.png](../../.gitbook/assets/transcation-example.png)
+![transcation-example.png](../../gitbook/assets/transcation-example.png)
 
 ### READ UNCOMMITED\(未提交读\)
 
@@ -39,11 +39,11 @@ SQL标准中定义，可重复读隔离级别，幻读问题仍可能存在。�
 
 顾名思义是对于同一行记录，“写”会加“写锁”，“读”会加“读锁”。当出现读写锁冲突的时候，后访问的事务必须等前一个事务执行完成，才能继续执行。
 
-![p1.png](../../.gitbook/assets/p1%20%281%29.png) ![p2.png](../../.gitbook/assets/p2%20%281%29.png)
+![p1.png](../../gitbook/assets/p1%20%281%29.png) ![p2.png](../../gitbook/assets/p2%20%281%29.png)
 
 ## 事务的实现
 
-在 MySQL 中，实际上每条记录在更新的时候都会同时记录一条回滚操作。记录上的最新值，通过回滚操作，都可以得到前一个状态的值。 ![redo-undo.png](../../.gitbook/assets/redo-undo.png)
+在 MySQL 中，实际上每条记录在更新的时候都会同时记录一条回滚操作。记录上的最新值，通过回滚操作，都可以得到前一个状态的值。 ![redo-undo.png](../../gitbook/assets/redo-undo.png)
 
 Q: 什么时候可以删除undo日志？
 
@@ -102,7 +102,7 @@ redo log buffer\(0\) &gt; file system page cache\(2\) &gt; 磁盘\(1\)
 
 delete和update操作并不直接删除原有的数据，purge用于最终完成delete和update操作。原因：InnoDB存储引擎支持MVCC，记录不能再事务提交时立即进行处理。其他事务可能正在引用这行，因此需要保存记录之前的版本。
 
-若该行记录已经不被其他事务引用，那么就可以由purge进行真正的delete操作。 ![undo log&#x4E0E;history&#x5217;&#x8868;&#x7684;&#x5173;&#x7CFB;](../../.gitbook/assets/undo-log-and-history-list.png)
+若该行记录已经不被其他事务引用，那么就可以由purge进行真正的delete操作。 ![undo log&#x4E0E;history&#x5217;&#x8868;&#x7684;&#x5173;&#x7CFB;](../../gitbook/assets/undo-log-and-history-list.png)
 
 ## 事务的启动方式
 

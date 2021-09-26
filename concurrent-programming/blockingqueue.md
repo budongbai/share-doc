@@ -25,4 +25,3 @@
 * SynchronousQueue： 不存储元素的阻塞队列
 * LinkedTransferQueue： 无界阻塞队列
 * LinkedBlockingDeque： 双向阻塞队列
-
