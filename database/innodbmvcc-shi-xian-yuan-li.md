@@ -16,7 +16,7 @@ InnoDB存储引擎在每行数据的后面添加了三个[隐藏字段](https://
 
 1. **DB\_TRX\_ID\(6字节\)**：表示最近一次对本记录行作修改（insert \| update）的事务ID。对于delete操作，InnoDB认为是一个update操作，会额外更新一个另外的删除位，将行表示为deleted，并非真正物理删除。
 2. **DB\_ROLL\_PTR\(7字节\)**：回滚指针，指向当前记录行的undo log信息
-3. **DB\_ROW\_ID\(6字节\)**：随着新行插入而单调递增的行ID。理解：当表没有主键或唯一非空索引时，innodb就会使用这个行ID自动产生聚簇索引。如果表有主键或唯一非空索引，聚簇索引就不会包含这个行ID了。这个DB\_ROW\_ID跟MVCC关系不大。 ![0](../../gitbook/assets/0.png)
+3. **DB\_ROW\_ID\(6字节\)**：随着新行插入而单调递增的行ID。理解：当表没有主键或唯一非空索引时，innodb就会使用这个行ID自动产生聚簇索引。如果表有主键或唯一非空索引，聚簇索引就不会包含这个行ID了。这个DB\_ROW\_ID跟MVCC关系不大。 ![0](../gitbook/assets/0.png)
 
 ### 2.2 Read view
 
@@ -29,7 +29,7 @@ Read view中保存的trx\_sys状态主要包括
 * **low\_limit\_no**：trx\_no小于view-&gt;low\_limit\_no的undo log对于view是可以purge的
 * **rw\_trx\_ids**：读写事务数组。Read View创建时其他未提交的活跃事务ID列表。意思就是创建Read View时，将当前未提交事务ID记录下来，后续即使它们修改了记录行的值，对于当前事务也是不可见的。_注意：Read View中trx\_ids的活跃事务，不包括当前事务自己和已提交的事务（正在内存中）_
 
-![3](../../gitbook/assets/3.png)
+![3](../gitbook/assets/3.png)
 
 _创建/关闭read view需要持有trx\_sys-&gt;mutex，会降低系统性能，5.7版本对此进行优化，在事务提交时session会cache只读事务的 read view。下次创建read view 时，判断如果是只读事务并且系统的读写事务状态没有发生变化，即trx\_sys的max\_trx\_id没有向前推进，而且没有新的读写事务产生，就可以重用上次的read view。_
 
@@ -50,7 +50,9 @@ InnoDB通过事务的undo日志巧妙地实现了多版本的数据快照。 当
 
 #### **记录修改的具体流程**
 
-假设有一条记录行如下，字段有Name和Honor，值分别为"curry"和"mvp"，最新修改这条记录的事务ID为1 ![0](../../gitbook/assets/0%20%281%29.png)
+假设有一条记录行如下，字段有Name和Honor，值分别为"curry"和"mvp"，最新修改这条记录的事务ID为1
+
+ ![0](../gitbook/assets/0%20%281%29.png)
 
 * 1. 现在事务A（事务ID为2）对该记录的Honor做出了修改，将Honor改为"fmvp"：
   2. 1. 事务A先对该行加排它锁;
@@ -58,14 +60,14 @@ InnoDB通过事务的undo日志巧妙地实现了多版本的数据快照。 当
   4. 1. 拷贝完毕后，修改该行的Honor为"fmvp"，并且修改DB\_TRX\_ID为2（事务A的ID）, 回滚指针指向拷贝到undo log的旧版本。（然后还会将修改后的最新数据写入redo log）
   5. 1. 事务提交，释放排他锁
 
-        ![1](../../gitbook/assets/1.png)
+        ![1](../gitbook/assets/1.png)
 * 1. 接着事务B（事务ID为3）修改同一个记录行，将Name修改为"iguodala"
   2. 2.1 事务B先对该行加排它锁
   3. 2.2 然后把该行数据拷贝到undo log中，作为旧版本
   4. 2.3 拷贝完毕后，修改该行Name为"iguodala"，并且修改DB\_TRX\_ID为3（事务B的ID）, 回滚指针指向拷贝到undo log最新的旧版本
   5. 2.4 事务提交，释放排他锁
 
-![2](../../gitbook/assets/2.png) 从上面可以看出，不同事务或者相同事务的对同一记录行的修改，会使该记录行的undo log成为一条链表，undo log的链首就是最新的旧记录，链尾就是最早的旧记录
+![2](../gitbook/assets/2.png) 从上面可以看出，不同事务或者相同事务的对同一记录行的修改，会使该记录行的undo log成为一条链表，undo log的链首就是最新的旧记录，链尾就是最早的旧记录
 
 #### 2.4 可见性算法
 
@@ -92,7 +94,14 @@ Read view创建之后，读数据时比较记录最后更新的trx\_id和view的
 
 ### 4 只读事务 \(Read-Only transaction\)
 
-InnoDB通过如下两种方式来判断一个事务是否为只读事务 １）在InnoDB中通过 start transaction read only 命令来开启，只读事务是指在事务中只允许读操作，不允许修改操作。如果在只读事务中尝试对数据库做修改操作会报错，报错后该事务依然是只读事务，'ERROR 1792 \(25006\): Cannot execute statement in a READ ONLY transaction.' ２）autocommit 开关打开，并且语句是单条语句，并且这条语句是"non-locking" SELECT 语句，也就是不使用 FOR UPDATE/LOCK IN SHARED MODE 的 SELECT 语句。 优势：１）只读事务避免了为事务分配事务ID\(TRX\_ID域\)的开销；２）对于密集读的场景，可以将一组查询请求包裹在只读事务中，既能提高性能，又能保证查询数据的一致性。
+InnoDB通过如下两种方式来判断一个事务是否为只读事务
+1. 在InnoDB中通过 start transaction read only 命令来开启，只读事务是指在事务中只允许读操作，不允许修改操作。如果在只读事务中尝试对数据库做修改操作会报错，报错后该事务依然是只读事务，'ERROR 1792 \(25006\): Cannot execute statement in a READ ONLY transaction.' 
+2. autocommit 开关打开，并且语句是单条语句，并且这条语句是"non-locking" SELECT 语句，也就是不使用 FOR UPDATE/LOCK IN SHARED MODE 的 SELECT 语句。 
+
+优势：
+
+1. 只读事务避免了为事务分配事务ID\(TRX\_ID域\)的开销；
+2. 对于密集读的场景，可以将一组查询请求包裹在只读事务中，既能提高性能，又能保证查询数据的一致性。
 
 MySQL 5.6对于没有显示指定READ ONLY事务，默认是读写事务，在事务开启时刻分配trx\_id和回滚段，并把当前事务加到trx\_sys的读写事务数组中。5.7版本对于所有事务默认是只读事务，遇到第一个写操作时，只读事务切换成读写事务分配trx\_id和回滚段，并把当前事务加到trx\_sys的读写事务组中。
 

@@ -18,7 +18,7 @@ WAL 的全称是 Write-Ahead Logging，它的关键点就是先写日志，再�
 
 ## 两阶段提交
 
-![two\_phases\_commit.png](../../gitbook/assets/two_phases_commit.png) 将 redo log 的写入拆成了两个步骤：prepare 和 commit，这就是"两阶段提交"。
+![two\_phases\_commit.png](../gitbook/assets/two_phases_commit.png) 将 redo log 的写入拆成了两个步骤：prepare 和 commit，这就是"两阶段提交"。
 
 Q：如果不用两阶段提交，会有什么问题
 
@@ -27,7 +27,7 @@ Q：如果不用两阶段提交，会有什么问题
 
 ## binlog的写入
 
-事务执行过程中，先把日志写到 binlog cache，事务提交的时候，再把 binlog cache 写到 binlog 文件中。 ![binlog.png](../../gitbook/assets/binlog.png)
+事务执行过程中，先把日志写到 binlog cache，事务提交的时候，再把 binlog cache 写到 binlog 文件中。 ![binlog.png](../gitbook/assets/binlog.png)
 
 相关参数
 
@@ -43,14 +43,14 @@ write 和 fsync 的时机，是由参数 sync\_binlog 控制的：sync\_binlog=0
 
 相关参数
 
-* innodb\_flush\_log\_at\_trx\_commit ![innodb\_flush\_log\_at\_trx\_commit](../../gitbook/assets/innodb_flush_log_at_trx_commit.png)
+* innodb\_flush\_log\_at\_trx\_commit ![innodb\_flush\_log\_at\_trx\_commit](../gitbook/assets/innodb_flush_log_at_trx_commit.png)
 * 后台线程每秒一次的轮询操作外，还有两种场景会让一个没有提交的事务的 redo log 写入到磁盘中。
 * redo log buffer 占用的空间即将达到 innodb\_log\_buffer\_size 一半的时候，后台线程会主动写盘。注意，由于这个事务并没有提交，所以这个写盘动作只是 write，而没有调用 fsync，也就是只留在了文件系统的 page cache。
 * 并行的事务提交的时候，顺带将这个事务的 redo log buffer 持久化到磁盘。假设一个事务 A 执行到一半，已经写了一些 redo log 到 buffer 中，这时候有另外一个线程的事务 B 提交，如果 innodb\_flush\_log\_at\_trx\_commit 设置的是 1，那么按照这个参数的逻辑，事务 B 要把 redo log buffer 里的日志全部持久化到磁盘。这时候，就会带上事务 A 在 redo log buffer 里的日志一起持久化到磁盘。
 
 ### 数据刷盘问题
 
-![redo\_log](../../gitbook/assets/redo_log.png)
+![redo\_log](../gitbook/assets/redo_log.png)
 
 write pos 是当前记录的位置，一边写一边后移，写到第 3 号文件末尾后就回到 0 号文件开头。checkpoint 是当前要擦除的位置，也是往后推移并且循环的，擦除记录前要把记录更新到数据文件。
 
@@ -66,14 +66,14 @@ LSN:日志逻辑序列号（log sequence number。LSN 是单调递增的，用�
 
 ### redo log 组提交
 
-![redo\_log\_group\_commit.png](../../gitbook/assets/redo_log_group_commit.png)
+![redo\_log\_group\_commit.png](../gitbook/assets/redo_log_group_commit.png)
 
 1. trx1 是第一个到达的，会被选为这组的 leader；
 2. 等 trx1 要开始写盘的时候，这个组里面已经有了三个事务，这时候 LSN 也变成了 160；
 3. trx1 去写盘的时候，带的就是 LSN=160，因此等 trx1 返回时，所有 LSN 小于等于 160 的 redo log，都已经被持久化到磁盘；
 4. 这时候 trx2 和 trx3 就可以直接返回了。
 
-在并发更新场景下，第一个事务写完 redo log buffer 以后，接下来这个 fsync 越晚调用，组员可能越多，节约 IOPS 的效果就越好。 ![two\_phases\_commit\_detail](../../gitbook/assets/two_phases_commit_detail.png)
+在并发更新场景下，第一个事务写完 redo log buffer 以后，接下来这个 fsync 越晚调用，组员可能越多，节约 IOPS 的效果就越好。 ![two\_phases\_commit\_detail](../gitbook/assets/two_phases_commit_detail.png)
 
 #### 相关参数
 

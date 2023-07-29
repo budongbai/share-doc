@@ -39,7 +39,7 @@ ConditionObject是AQS中的一个内部类，因为Condition的操作需要获�
         private transient Node lastWaiter;
 ```
 
-![./Condition-await.png](../../gitbook/assets/Condition-await.png) ![./Condition-signal.png](../../gitbook/assets/Condition-signal.png)
+![./Condition-await.png](../gitbook/assets/Condition-await.png) ![./Condition-signal.png](../gitbook/assets/Condition-signal.png)
 
 ### await
 

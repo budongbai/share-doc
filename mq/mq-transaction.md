@@ -21,7 +21,7 @@ LocalTransactionState checkLocalTransaction(final MessageExt msg);
 
 ## 实现
 
-![&#x4E8B;&#x52A1;&#x6D88;&#x606F;](../../gitbook/assets/transaction.png)
+![&#x4E8B;&#x52A1;&#x6D88;&#x606F;](../gitbook/assets/transaction.png)
 
 利用事务反查机制解决了事务消息提交失败的问题。
 
@@ -44,7 +44,7 @@ RocketMQ事务消息的做法是：如果消息是half消息，将备份原消�
 
 在RocketMQ中，消息在服务端的存储结构如下，每条消息都会有对应的索引信息，Consumer通过ConsumeQueue这个二级索引来读取消息实体内容，其流程如下：
 
-![](../../gitbook/assets/consume.png)
+![](../gitbook/assets/consume.png)
 
 RocketMQ的具体实现策略是：写入的如果事务消息，对消息的Topic和Queue等属性进行替换，同时将原来的Topic和Queue信息存储到消息的属性中，正因为消息主题被替换，故消息并不会转发到该原主题的消息消费队列，消费者无法感知消息的存在，不会消费。其实改变消息主题是RocketMQ的常用“套路”，延时消息的实现机制也是类似的。
 
@@ -62,7 +62,7 @@ Commit相对于Rollback只是在写入Op消息前创建Half消息的索引。
 
 RocketMQ将Op消息写入到全局一个特定的Topic中通过源码中的方法—TransactionalMessageUtil.buildOpTopic\(\)；这个Topic是一个内部的Topic（像Half消息的Topic一样），不会被用户消费。Op消息的内容为对应的Half消息的存储的Offset，这样通过Op消息能索引到Half消息进行后续的回查操作。
 
-![](../../gitbook/assets/op-queue.png)
+![](../gitbook/assets/op-queue.png)
 
 4.Half消息的索引构建
 
@@ -76,7 +76,7 @@ RocketMQ将Op消息写入到全局一个特定的Topic中通过源码中的方�
 
 ## 源码略读
 
-![](../../gitbook/assets/RocketMQ技术内幕8-1.jpeg)
+![](../gitbook/assets/RocketMQ技术内幕8-1.jpeg)
 
 ### 发送事务消息
 
@@ -103,7 +103,7 @@ SendMessageProcessor\#sendMessage
 
 EndTranscationProcessor\#processRequest
 
-![](../../gitbook/assets/RocketMQ技术内幕8-3.jpeg)
+![](../gitbook/assets/RocketMQ技术内幕8-3.jpeg)
 
 ### 检查
 
@@ -120,7 +120,7 @@ TransactionalMessageCheckService\#run
 
 ClientRemotingProcessor\#processRequest 会去调用发消息时实现的接口，反查本地事务状态
 
-![](../../gitbook/assets/RocketMQ技术内幕8-4.jpeg)
+![](../gitbook/assets/RocketMQ技术内幕8-4.jpeg)
 
 ## 参考文献
 
